@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Solar Cycle Classroom Explorer</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root{--ink:#2f2f2f;--muted:#737373;--border:#dfe3e8;--grid:#e7e7e7;--bg:#f5f7fa;--panel:#fff}
+*{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:var(--bg)}
+header{background:#fff;border-bottom:1px solid var(--border);padding:24px 28px} h1{margin:0 0 7px;font-size:26px} header p{margin:0;color:var(--muted)}
+main{max-width:1180px;margin:22px auto;padding:0 18px 48px}.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;margin:0 0 22px;box-shadow:0 1px 2px rgba(0,0,0,.025)}
+.card-head{padding:17px 18px 0}.card h2{font-size:19px;text-align:center;margin:0 0 7px}.desc{text-align:center;color:var(--muted);font-size:14px;line-height:1.45;margin:0 auto;max-width:900px}
+.plot{height:500px;width:100%}.plot.tall{height:560px}.controls{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:10px 18px 2px}.controls button{border:1px solid #cfd5dc;background:#f7f8fa;border-radius:5px;padding:7px 12px;cursor:pointer}.controls button.active{background:#e5e9ff;border-color:#aab5ff}.status{padding:4px 18px 13px;text-align:center;color:#8a8a8a;font-size:12px}.sources{font-size:12px;color:#888;text-align:right;padding:0 18px 12px}.note{background:#fff8dc;border:1px solid #f0dda0;padding:10px 12px;border-radius:6px;margin:12px 18px;font-size:13px;display:none}
+.reset-row{padding:0 18px 8px;text-align:right}.reset-view{border:1px solid #cfd5dc;background:#fff;border-radius:5px;padding:5px 10px;color:#555;cursor:pointer;font-size:12px}.reset-view:hover{background:#f7f8fa}.sources a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+footer{text-align:center;color:#888;font-size:12px;margin-top:24px}.loading{color:#777}.error{color:#9d2d2d}
+@media(max-width:700px){.plot{height:420px}.plot.tall{height:470px}header{padding:20px}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<header><h1>Solar Cycle Classroom Explorer</h1><p>Interactive plots for studying the long-term solar and geomagnetic activity.</p></header>
+<main>
+<section class="card"><div class="card-head"><h2>International Sunspot Number</h2><p class="desc">Monthly mean total sunspot number and the 13-month smoothed series. Use the toolbar to zoom, pan, autoscale, inspect values and export an image.</p></div><div id="sunspot" class="plot tall"></div><div class="sources">Source: <a href="https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json" target="_blank" rel="noopener noreferrer">NOAA/SWPC ISES solar-cycle data</a></div></section>
+<section class="card"><div class="card-head"><h2>Number of Spotless Days per Year</h2><p class="desc">A spotless day is a day for which the daily total sunspot number is zero.</p></div><div id="spotless" class="plot"></div><div class="sources">Source: <a href="https://www.sidc.be/SILSO/DATA/SN_d_tot_V2.0.csv" target="_blank" rel="noopener noreferrer">WDC-SILSO, Royal Observatory of Belgium</a></div></section>
+<section class="card"><div class="card-head"><h2>Butterfly Diagram</h2><p class="desc">Latitude of reported sunspot regions versus time, showing the equatorward migration of active regions through each solar cycle.</p></div><div id="butterfly" class="plot tall"></div><div id="butterfly-note" class="note">Butterfly data have not been built yet. Run <b>python build_data.py</b> once, then reload this page.</div><div class="sources">Source: <a href="https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_region_summaries/" target="_blank" rel="noopener noreferrer">NOAA/NCEI Solar Region Summaries</a></div></section>
+<section class="card"><div class="card-head"><h2>10.7 cm Solar Radio Flux (F10.7)</h2><p class="desc">Observed monthly F10.7 solar radio flux and its smoothed progression. F10.7 measures solar radio flux at 10.7 cm (2800 MHz) and is commonly used as a proxy for solar EUV activity.</p></div><div id="f107" class="plot"></div><div class="sources">Source: <a href="https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json" target="_blank" rel="noopener noreferrer">NOAA/SWPC ISES solar-cycle data</a></div></section>
+<section class="card"><div class="card-head"><h2>Number of C-, M- and X-class Solar Flares per Year</h2><p class="desc">Annual GOES soft X-ray flare counts. Select an individual flare class or display all classes as a stacked bar chart.</p></div><div class="controls" id="flare-controls"><button data-mode="all" class="active">Stack all</button><button data-mode="C">C-class</button><button data-mode="M">M-class</button><button data-mode="X">X-class</button></div><div id="flares" class="plot"></div><div id="flares-note" class="note">Flare-count data have not been built yet. Run <b>python build_data.py</b> once, then reload this page.</div><div class="sources">Source: <a href="https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_event_reports/" target="_blank" rel="noopener noreferrer">NOAA/NCEI SWPC Solar Event Reports</a></div></section>
+<section class="card"><div class="card-head"><h2>Geomagnetic Storm Days per Year</h2><p class="desc">Each day is classified by the strongest 3-hour Kp interval that day. Select individual NOAA G levels or display all levels as a stacked bar chart.</p></div><div class="controls" id="storm-controls"><button data-mode="all" class="active">Stack all</button><button data-mode="G1">G1</button><button data-mode="G2">G2</button><button data-mode="G3">G3</button><button data-mode="G4">G4</button><button data-mode="G5">G5</button></div><div id="storms" class="plot"></div><div class="sources">Source: <a href="https://kp.gfz.de/en/data" target="_blank" rel="noopener noreferrer">GFZ German Research Centre for Geosciences, Kp index</a></div></section>
+<footer>Built for classroom use. Plotly controls are available at the upper-right of every graph.</footer>
+</main>
+<script>
+const config={
+  responsive:true,displaylogo:false,scrollZoom:true,
+  modeBarButtonsToRemove:['select2d','lasso2d','toggleSpikelines'],
+  toImageButtonOptions:{format:'png',scale:2}
+};
+const common={
+  paper_bgcolor:'#fff',plot_bgcolor:'#fff',font:{family:'Arial, sans-serif',color:'#333'},
+  hovermode:'x unified',margin:{l:68,r:42,t:25,b:62},
+  xaxis:{gridcolor:'#e7e7e7',linecolor:'#333',showline:true,mirror:false},
+  yaxis:{gridcolor:'#e7e7e7',linecolor:'#333',showline:true}
+};
+
+// Dates are the SILSO cycle minima (monthly, 13-month smoothed SSN v2.0).
+const cycleStarts=[
+  ['SC21','1976-03-01'],['SC22','1986-09-01'],['SC23','1996-08-01'],
+  ['SC24','2008-12-01'],['SC25','2019-12-01']
+];
+function cycleMarkers(){
+  return {
+    shapes:cycleStarts.map(([label,date])=>({
+      type:'line',xref:'x',yref:'paper',x0:date,x1:date,y0:0,y1:1,
+      line:{color:'rgba(90,105,120,.30)',width:1,dash:'dot'},layer:'below'
+    })),
+    annotations:cycleStarts.map(([label,date])=>({
+      x:date,y:.98,xref:'x',yref:'paper',text:label,textangle:-90,
+      showarrow:false,xanchor:'left',yanchor:'top',font:{size:10,color:'#8994a0'}
+    }))
+  };
+}
+const initialViews=new Map();
+async function renderPlot(id,traces,layout,update=false){
+  const gd=document.getElementById(id);
+  await (update?Plotly.react(gd,traces,layout,config):Plotly.newPlot(gd,traces,layout,config));
+  initialViews.set(id,{
+    x:[...gd._fullLayout.xaxis.range],y:[...gd._fullLayout.yaxis.range]
+  });
+  if(!gd.nextElementSibling||!gd.nextElementSibling.classList.contains('reset-row')){
+    const row=document.createElement('div');row.className='reset-row';
+    const button=document.createElement('button');button.className='reset-view';
+    button.type='button';button.textContent='Reset view';
+    button.addEventListener('click',()=>{
+      const view=initialViews.get(id);
+      if(view)Plotly.relayout(gd,{'xaxis.range':view.x,'yaxis.range':view.y});
+    });
+    row.append(button);gd.after(row);
+  }
+}
+function errPlot(id,msg){
+  return Plotly.newPlot(id,[],{...common,annotations:[{
+    text:msg,x:.5,y:.5,xref:'paper',yref:'paper',showarrow:false,
+    font:{size:15,color:'#8a8a8a'}
+  }]},config);
+}
+async function getJSON(url){const r=await fetch(url);if(!r.ok)throw new Error(`${r.status} ${r.statusText}`);return r.json()}
+function pick(o,names){for(const n of names)if(o[n]!==undefined&&o[n]!==null)return o[n];return null}
+
+async function solarCycle(){
+  try{
+    const d=await getJSON('https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json');
+    const x=d.map(v=>pick(v,['time-tag','time_tag','date']));
+    const ssn=d.map(v=>+pick(v,['ssn','sunspot_number','observed_ssn']));
+    const smooth=d.map(v=>+pick(v,['smoothed_ssn','smoothed_sunspot_number']));
+    await renderPlot('sunspot',[
+      {x,y:ssn,name:'Monthly mean total sunspot number',mode:'lines',line:{width:1.2,color:'#111'}},
+      {x,y:smooth,name:'13-month smoothed monthly total sunspot number',mode:'lines',line:{width:3,color:'#e31a1c'}}
+    ],{...common,...cycleMarkers(),legend:{orientation:'h',x:.5,xanchor:'center',y:-.18},
+      yaxis:{...common.yaxis,title:'Sunspot number',rangemode:'tozero'},
+      xaxis:{...common.xaxis,rangeslider:{visible:true,thickness:.12},
+        rangeselector:{buttons:[
+          {count:33,label:'3 cycles',step:'year',stepmode:'backward'},
+          {count:55,label:'5 cycles',step:'year',stepmode:'backward'},
+          {count:110,label:'10 cycles',step:'year',stepmode:'backward'},
+          {step:'all',label:'All'}
+        ]}}});
+    const f=x.map((date,i)=>({
+      x:date,y:+pick(d[i],['f10.7','f10_7','f107','f10.7cm_flux']),
+      s:+pick(d[i],['smoothed_f10.7','smoothed_f10_7','smoothed_f107'])
+    })).filter(v=>Number.isFinite(v.y));
+    await renderPlot('f107',[
+      {x:f.map(v=>v.x),y:f.map(v=>v.y),name:'Observed F10.7',mode:'lines',line:{width:1.3,color:'#111'}},
+      {x:f.map(v=>v.x),y:f.map(v=>v.s),name:'Smoothed F10.7',mode:'lines',line:{width:3,color:'#e31a1c'},connectgaps:false}
+    ],{...common,...cycleMarkers(),legend:{orientation:'h',x:.5,xanchor:'center',y:-.18},
+      yaxis:{...common.yaxis,title:'F10.7 (sfu)'},
+      xaxis:{...common.xaxis,rangeslider:{visible:true,thickness:.12}}});
+  }catch(e){errPlot('sunspot','Could not load NOAA solar-cycle data');errPlot('f107','Could not load NOAA F10.7 data')}
+}
+
+// Annual bars are centered in each calendar year on a continuous date axis.
+const annualBarWidth=285*24*60*60*1000;
+function annualDates(d){return d.map(v=>`${v.year}-07-01`)}
+function annualYears(d){
+  const current=new Date().getUTCFullYear();
+  const last=d.length?d[d.length-1].year:null;
+  return d.map(v=>v.year===current&&last===current?`${v.year} YTD`:String(v.year));
+}
+function incompleteYearAnnotation(d){
+  return d.length&&d[d.length-1].year===new Date().getUTCFullYear()?[{
+    x:.99,y:.97,xref:'paper',yref:'paper',xanchor:'right',yanchor:'top',
+    text:'Current year is incomplete',showarrow:false,
+    font:{size:10,color:'#777'},bgcolor:'rgba(255,255,255,.8)'
+  }]:[];
+}
+function annualLayout(d,yTitle,extra={}){
+  const markers=cycleMarkers();
+  return {...common,...markers,...extra,
+    annotations:[...markers.annotations,...incompleteYearAnnotation(d)],
+    yaxis:{...common.yaxis,title:yTitle,rangemode:'tozero'},
+    xaxis:{...common.xaxis,title:'Year',type:'date',tickformat:'%Y',dtick:'M12'}};
+}
+async function spotless(){
+  try{
+    let txt;
+    try{
+      const r=await fetch('https://www.sidc.be/SILSO/DATA/SN_d_tot_V2.0.csv');
+      if(!r.ok)throw 0;txt=await r.text();
+    }catch(_){
+      const local=await fetch('data/spotless.json');if(!local.ok)throw 0;
+      return drawSpotless(await local.json());
+    }
+    const counts={};
+    txt.split(/\r?\n/).forEach(line=>{
+      if(!line.trim())return;
+      const p=line.split(';').map(s=>s.trim());
+      const year=+p[0],sn=+p[4];
+      if(!Number.isInteger(year)||year<1700||!Number.isFinite(sn)||sn<0)return;
+      if(counts[year]===undefined)counts[year]=0;
+      if(sn===0)counts[year]++;
+    });
+    drawSpotless(Object.entries(counts).map(([year,count])=>({year:+year,count})));
+  }catch(e){errPlot('spotless','Run build_data.py to create local spotless-day data')}
+}
+function drawSpotless(d){
+  d.sort((a,b)=>a.year-b.year);
+  return renderPlot('spotless',[{
+    x:annualDates(d),y:d.map(v=>v.count),customdata:annualYears(d),
+    width:annualBarWidth,type:'bar',name:'Spotless days',marker:{color:'#b9d9d2'},
+    hovertemplate:'%{customdata}<br>%{y} spotless days<extra></extra>'
+  }],annualLayout(d,'Number of spotless days',{bargap:.2}));
+}
+
+async function butterfly(){
+  try{
+    const d=await getJSON('data/butterfly.json');if(!d.length)throw 0;
+    await renderPlot('butterfly',[{
+      x:d.map(v=>v.date),y:d.map(v=>v.latitude),mode:'markers',name:'Sunspot regions',
+      marker:{size:d.map(v=>Math.max(3,Math.min(12,Math.sqrt(v.area||9)))),
+        opacity:.52,color:d.map(v=>v.latitude),colorscale:'RdBu',showscale:false},
+      hovertemplate:'%{x}<br>Latitude %{y:.0f}°<extra></extra>'
+    }],{...common,...cycleMarkers(),hovermode:'closest',
+      yaxis:{...common.yaxis,title:'Solar latitude (°)',range:[-45,45],zeroline:true,zerolinecolor:'#888'},
+      xaxis:{...common.xaxis,rangeslider:{visible:true,thickness:.10}}});
+  }catch(e){document.getElementById('butterfly-note').style.display='block';errPlot('butterfly','Butterfly data file not built yet')}
+}
+
+let flareData=[];
+const flareColors={C:'#f8e9a3',M:'#f7c99b',X:'#efadb5'};
+async function flares(){
+  try{
+    const d=await getJSON('data/flares.json');if(!d.length)throw 0;
+    flareData=d.sort((a,b)=>a.year-b.year);drawFlares('all');
+  }catch(e){document.getElementById('flares-note').style.display='block';errPlot('flares','Flare-count data file not built yet')}
+}
+function drawFlares(mode){
+  document.querySelectorAll('#flare-controls button').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  const classes=['C','M','X'],labels={C:'C-class',M:'M-class',X:'X-class'};
+  const x=annualDates(flareData),years=annualYears(flareData);
+  const traces=(mode==='all'?classes:[mode]).map(c=>({
+    x,y:flareData.map(v=>v[c]||0),customdata:years,width:annualBarWidth,
+    type:'bar',name:labels[c],marker:{color:flareColors[c]},
+    hovertemplate:`%{customdata}<br>${labels[c]}: %{y} flares<extra></extra>`
+  }));
+  return renderPlot('flares',traces,annualLayout(flareData,'Number of flares',{
+    barmode:mode==='all'?'stack':'group',legend:{orientation:'h',x:.5,xanchor:'center',y:-.18}
+  }),true);
+}
+document.getElementById('flare-controls').addEventListener('click',e=>{
+  if(e.target.dataset.mode)drawFlares(e.target.dataset.mode);
+});
+
+let stormData=[];
+function stormClass(k){if(k>=9)return'G5';if(k>=8)return'G4';if(k>=7)return'G3';if(k>=6)return'G2';if(k>=5)return'G1';return null}
+async function storms(){
+  try{
+    let d;
+    try{d=await getJSON('data/storms.json')}
+    catch(_){
+      const end=new Date().toISOString().slice(0,10);
+      const g=await getJSON(`https://kp.gfz.de/app/json/?start=1997-01-01T00:00:00Z&end=${end}T23:59:59Z&index=Kp`);
+      const times=pick(g,['datetime','time','date']),vals=pick(g,['Kp','kp','values']);
+      const byDay={};
+      times.forEach((t,i)=>{
+        const day=String(t).slice(0,10),v=+vals[i];
+        byDay[day]=Math.max(byDay[day]===undefined?-99:byDay[day],v);
+      });
+      const annual={};
+      for(const [day,k] of Object.entries(byDay)){
+        const cls=stormClass(k);if(!cls)continue;
+        const y=+day.slice(0,4);
+        if(!annual[y])annual[y]={year:y,G1:0,G2:0,G3:0,G4:0,G5:0};
+        annual[y][cls]++;
+      }
+      d=Object.values(annual);
+    }
+    stormData=d.sort((a,b)=>a.year-b.year);drawStorms('all');
+  }catch(e){errPlot('storms','Run build_data.py to create local Kp storm statistics')}
+}
+const stormColors={G1:'#b7d7e8',G2:'#c8e3cf',G3:'#f5e4a6',G4:'#f4c297',G5:'#eaa4a9'};
+function drawStorms(mode){
+  document.querySelectorAll('#storm-controls button').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  const levels=['G1','G2','G3','G4','G5'];
+  const x=annualDates(stormData),years=annualYears(stormData);
+  const traces=(mode==='all'?levels:[mode]).map(g=>({
+    x,y:stormData.map(v=>v[g]||0),customdata:years,width:annualBarWidth,
+    type:'bar',name:g,marker:{color:stormColors[g]},
+    hovertemplate:`%{customdata}<br>${g}: %{y} days<extra></extra>`
+  }));
+  return renderPlot('storms',traces,annualLayout(stormData,'Storm days',{
+    barmode:mode==='all'?'stack':'group',legend:{orientation:'h',x:.5,xanchor:'center',y:-.18}
+  }),true);
+}
+document.getElementById('storm-controls').addEventListener('click',e=>{
+  if(e.target.dataset.mode)drawStorms(e.target.dataset.mode);
+});
+solarCycle();spotless();butterfly();flares();storms();
+</script>
+</body></html>
