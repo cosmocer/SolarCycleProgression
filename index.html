@@ -8,23 +8,26 @@
 <style>
 :root{--ink:#2f2f2f;--muted:#737373;--border:#dfe3e8;--grid:#e7e7e7;--bg:#f5f7fa;--panel:#fff}
 *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:var(--bg)}
-header{background:#fff;border-bottom:1px solid var(--border);padding:24px 28px} h1{margin:0 0 7px;font-size:26px} header p{margin:0;color:var(--muted)}
-main{max-width:1180px;margin:22px auto;padding:0 18px 48px}.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;margin:0 0 22px;box-shadow:0 1px 2px rgba(0,0,0,.025)}
-.card-head{padding:17px 18px 0}.card h2{font-size:19px;text-align:center;margin:0 0 7px}.desc{text-align:center;color:var(--muted);font-size:14px;line-height:1.45;margin:0 auto;max-width:900px}
+header{background:#fff;border-bottom:1px solid var(--border);padding:24px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px} h1{margin:0 0 7px;font-size:26px} header p{margin:0;color:var(--muted);line-height:1.4}
+main{max-width:1180px;margin:22px auto;padding:0 18px 48px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start}.card{min-width:0;grid-column:1/-1;background:var(--panel);border:1px solid var(--border);border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.025)}.card.half{grid-column:span 1}.card.dragging{opacity:.45}.card[data-drop-side="before"]{box-shadow:0 -5px 0 #6175c9}.card[data-drop-side="after"]{box-shadow:0 5px 0 #6175c9}
+.card-head{padding:12px 18px 0}.card h2{font-size:19px;text-align:center;margin:0 0 7px}.desc{text-align:center;color:var(--muted);font-size:14px;line-height:1.45;margin:0 auto;max-width:900px}
+.panel-actions{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-bottom:8px}.panel-actions button,#reset-panel-layout{border:1px solid #cfd5dc;background:#f7f8fa;border-radius:5px;padding:5px 8px;color:#555;cursor:pointer;font-size:12px}.panel-actions button:hover,#reset-panel-layout:hover{background:#e9edf4}.panel-actions button:focus-visible,#reset-panel-layout:focus-visible{outline:2px solid #6175c9;outline-offset:2px}.panel-actions .drag-handle{cursor:grab;touch-action:none}.panel-actions .drag-handle:active{cursor:grabbing}#reset-panel-layout{white-space:nowrap}footer{grid-column:1/-1}
 .plot{height:500px;width:100%}.plot.tall{height:560px}.controls{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:10px 18px 2px}.controls button{border:1px solid #cfd5dc;background:#f7f8fa;border-radius:5px;padding:7px 12px;cursor:pointer}.controls button.active{background:#e5e9ff;border-color:#aab5ff}.status{padding:4px 18px 13px;text-align:center;color:#8a8a8a;font-size:12px}.sources{font-size:12px;color:#888;text-align:right;padding:0 18px 12px}.note{background:#fff8dc;border:1px solid #f0dda0;padding:10px 12px;border-radius:6px;margin:12px 18px;font-size:13px;display:none}
 .reset-row{padding:0 18px 8px;text-align:right}.reset-view{border:1px solid #cfd5dc;background:#fff;border-radius:5px;padding:5px 10px;color:#555;cursor:pointer;font-size:12px}.reset-view:hover{background:#f7f8fa}.sources a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 footer{text-align:center;color:#888;font-size:12px;margin-top:24px}.loading{color:#777}.error{color:#9d2d2d}
-@media(max-width:700px){.plot{height:420px}.plot.tall{height:470px}header{padding:20px}h1{font-size:22px}}
+@media(max-width:850px){main{grid-template-columns:minmax(0,1fr)}.card.half{grid-column:1/-1}}
+@media(max-width:700px){.plot{height:420px}.plot.tall{height:470px}header{padding:20px;flex-wrap:wrap}h1{font-size:22px}.panel-actions{flex-wrap:wrap}}
 </style>
 </head>
 <body>
-<header><h1>Solar Cycle Classroom Explorer</h1><p>Interactive plots for studying the long-term solar and geomagnetic activity.</p></header>
+<header><div><h1>Solar Cycle Classroom Explorer</h1><p>Interactive plots for studying long-term solar and geomagnetic activity. Drag panel handles to reorder; choose Half width on two panels to compare them side by side.</p></div><button id="reset-panel-layout" type="button">Reset panel layout</button></header>
 <main>
 <section class="card"><div class="card-head"><h2>International Sunspot Number</h2><p class="desc">Monthly mean total sunspot number and the 13-month smoothed series. Use the toolbar to zoom, pan, autoscale, inspect values and export an image.</p></div><div id="sunspot" class="plot tall"></div><div class="sources">Source: <a href="https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json" target="_blank" rel="noopener noreferrer">NOAA/SWPC ISES solar-cycle data</a></div></section>
 <section class="card"><div class="card-head"><h2>Number of Spotless Days per Year</h2><p class="desc">A spotless day is a day for which the daily total sunspot number is zero.</p></div><div id="spotless" class="plot"></div><div class="sources">Source: <a href="https://www.sidc.be/SILSO/DATA/SN_d_tot_V2.0.csv" target="_blank" rel="noopener noreferrer">WDC-SILSO, Royal Observatory of Belgium</a></div></section>
 <section class="card"><div class="card-head"><h2>Butterfly Diagram</h2><p class="desc">Latitude of reported sunspot regions versus time, showing the equatorward migration of active regions through each solar cycle.</p></div><div id="butterfly" class="plot tall"></div><div id="butterfly-note" class="note">Butterfly data have not been built yet. Run <b>python build_data.py</b> once, then reload this page.</div><div class="sources">Source: <a href="https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_region_summaries/" target="_blank" rel="noopener noreferrer">NOAA/NCEI Solar Region Summaries</a></div></section>
 <section class="card"><div class="card-head"><h2>10.7 cm Solar Radio Flux (F10.7)</h2><p class="desc">Observed monthly F10.7 solar radio flux and its smoothed progression. F10.7 measures solar radio flux at 10.7 cm (2800 MHz) and is commonly used as a proxy for solar EUV activity.</p></div><div id="f107" class="plot"></div><div class="sources">Sources: <a href="https://psl.noaa.gov/data/correlation/solar.data" target="_blank" rel="noopener noreferrer">NOAA/PSL monthly flux (1995–2004)</a>; <a href="https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json" target="_blank" rel="noopener noreferrer">NOAA/SWPC ISES solar-cycle data</a></div></section>
-<section class="card"><div class="card-head"><h2>Number of C-, M- and X-class Solar Flares per Year</h2><p class="desc">Annual GOES soft X-ray flare counts. Select an individual flare class or display all classes as a stacked bar chart.</p></div><div class="controls" id="flare-controls"><button data-mode="all" class="active">Stack all</button><button data-mode="C">C-class</button><button data-mode="M">M-class</button><button data-mode="X">X-class</button></div><div id="flares" class="plot"></div><div id="flares-note" class="note">Flare-count data have not been built yet. Run <b>python build_data.py</b> once, then reload this page.</div><div class="sources">Source: <a href="https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_event_reports/" target="_blank" rel="noopener noreferrer">NOAA/NCEI SWPC Solar Event Reports</a></div></section>
+<section class="card"><div class="card-head"><h2>Number of C-, M- and X-class Solar Flares per Year</h2><p class="desc">Annual GOES soft X-ray flare counts. Select an individual flare class or display all classes as a stacked bar chart.</p></div><div class="controls" id="flare-controls"><button data-mode="all" class="active">Stack all</button><button data-mode="C">C-class</button><button data-mode="M">M-class</button><button data-mode="X">X-class</button></div><div id="flares" class="plot"></div><div id="flares-note" class="note">Flare-count data have not been built yet. Run <b>python build_data.py</b> once, then reload this page.</div><div class="sources" id="flare-source">Source: <a href="https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_event_reports/" target="_blank" rel="noopener noreferrer">NOAA/NCEI SWPC Solar Event Reports</a></div></section>
+<section class="card"><div class="card-head"><h2>Individual GOES Flare Peak X-ray Flux</h2><p class="desc">Peak 0.1–0.8 nm X-ray irradiance for each C-, M- or X-class flare, shown on a logarithmic scale. Each point is one flare; the axis begins in 1995 for comparison with the annual counts above.</p></div><div id="flare-peaks" class="plot tall"></div><div id="flare-peaks-note" class="note">GOES flare peaks could not be loaded. Run <b>python build_data.py --flares-only</b> to create the local data file, then reload this page.</div><div class="sources">Source: <a href="https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes/multi/l2/data/xrsf-l2-flrpt_science/csv/" target="_blank" rel="noopener noreferrer">NOAA/NCEI GOES XRS science-quality flare report</a></div></section>
 <section class="card"><div class="card-head"><h2>Geomagnetic Storm Days per Year</h2><p class="desc">Each day is classified by the strongest 3-hour Kp interval that day. Select individual NOAA G levels or display all levels as a stacked bar chart.</p></div><div class="controls" id="storm-controls"><button data-mode="all" class="active">Stack all</button><button data-mode="G1">G1</button><button data-mode="G2">G2</button><button data-mode="G3">G3</button><button data-mode="G4">G4</button><button data-mode="G5">G5</button></div><div id="storms" class="plot"></div><div class="sources">Source: <a href="https://kp.gfz.de/en/data" target="_blank" rel="noopener noreferrer">GFZ German Research Centre for Geosciences, Kp index</a></div></section>
 <footer>Built for classroom use. Plotly controls are available at the upper-right of every graph.</footer>
 </main>
@@ -40,6 +43,111 @@ const common={
   xaxis:{gridcolor:'#e7e7e7',linecolor:'#333',showline:true,mirror:false},
   yaxis:{gridcolor:'#e7e7e7',linecolor:'#333',showline:true}
 };
+function setupPanels(){
+  const main=document.querySelector('main');
+  const footer=main.querySelector('footer');
+  const cards=[...main.querySelectorAll('section.card')];
+  const byId=new Map(cards.map(card=>{
+    card.dataset.panelId=card.querySelector('.plot').id;
+    return [card.dataset.panelId,card];
+  }));
+  const storageKey='solar-cycle-classroom-panel-layout-v1';
+  let draggingCard=null;
+  function saveLayout(){
+    try{
+      localStorage.setItem(storageKey,JSON.stringify({
+        order:[...main.querySelectorAll('section.card')].map(card=>card.dataset.panelId),
+        half:[...main.querySelectorAll('section.card.half')].map(card=>card.dataset.panelId)
+      }));
+    }catch(_){}
+  }
+  function resizeCharts(){
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      main.querySelectorAll('.plot').forEach(plot=>{
+        if(plot._fullLayout)Plotly.Plots.resize(plot);
+      });
+    }));
+  }
+  function clearDropState(){
+    cards.forEach(card=>{card.classList.remove('dragging');delete card.dataset.dropSide});
+    draggingCard=null;
+  }
+  function moveCard(card,direction){
+    const neighbor=direction<0?card.previousElementSibling:card.nextElementSibling;
+    if(!neighbor||!neighbor.matches('section.card'))return;
+    if(direction<0)neighbor.before(card);else neighbor.after(card);
+    saveLayout();resizeCharts();card.querySelector('.drag-handle').focus();
+  }
+  cards.forEach(card=>{
+    const actions=document.createElement('div');actions.className='panel-actions';
+    const drag=document.createElement('button');
+    drag.type='button';drag.className='drag-handle';drag.draggable=true;
+    drag.textContent='☰ Drag';drag.title='Drag to move this panel';
+    drag.setAttribute('aria-label',`Drag ${card.querySelector('h2').textContent} panel`);
+    drag.addEventListener('dragstart',event=>{
+      draggingCard=card;
+      if(event.dataTransfer){
+        event.dataTransfer.effectAllowed='move';
+        event.dataTransfer.setData('text/plain',card.dataset.panelId);
+      }
+      requestAnimationFrame(()=>card.classList.add('dragging'));
+    });
+    drag.addEventListener('dragend',clearDropState);
+    const earlier=document.createElement('button');earlier.type='button';
+    earlier.textContent='↑';earlier.title='Move panel earlier';
+    earlier.setAttribute('aria-label',`Move ${card.querySelector('h2').textContent} earlier`);
+    earlier.addEventListener('click',()=>moveCard(card,-1));
+    const later=document.createElement('button');later.type='button';
+    later.textContent='↓';later.title='Move panel later';
+    later.setAttribute('aria-label',`Move ${card.querySelector('h2').textContent} later`);
+    later.addEventListener('click',()=>moveCard(card,1));
+    const width=document.createElement('button');width.type='button';
+    width.className='panel-width';
+    function updateWidth(){width.textContent=card.classList.contains('half')?'Full width':'Half width'}
+    width.addEventListener('click',()=>{
+      card.classList.toggle('half');updateWidth();saveLayout();resizeCharts();
+    });
+    actions.append(drag,earlier,later,width);
+    card.querySelector('.card-head').prepend(actions);
+    card.addEventListener('dragover',event=>{
+      if(!draggingCard||draggingCard===card)return;
+      event.preventDefault();if(event.dataTransfer)event.dataTransfer.dropEffect='move';
+      const rect=card.getBoundingClientRect();
+      const nearMiddle=Math.abs(event.clientY-(rect.top+rect.height/2))<rect.height/4;
+      card.dataset.dropSide=(nearMiddle?event.clientX>=rect.left+rect.width/2:
+        event.clientY>=rect.top+rect.height/2)?'after':'before';
+    });
+    card.addEventListener('dragleave',event=>{
+      if(!card.contains(event.relatedTarget))delete card.dataset.dropSide;
+    });
+    card.addEventListener('drop',event=>{
+      if(!draggingCard||draggingCard===card)return;
+      event.preventDefault();
+      if(card.dataset.dropSide==='after')card.after(draggingCard);
+      else card.before(draggingCard);
+      clearDropState();saveLayout();resizeCharts();
+    });
+    card.updateWidthButton=updateWidth;
+  });
+  try{
+    const saved=JSON.parse(localStorage.getItem(storageKey));
+    if(saved&&Array.isArray(saved.order)&&Array.isArray(saved.half)){
+      const seen=new Set();
+      saved.order.forEach(id=>{
+        const card=byId.get(id);
+        if(card){main.insertBefore(card,footer);seen.add(id)}
+      });
+      cards.forEach(card=>{if(!seen.has(card.dataset.panelId))main.insertBefore(card,footer)});
+      saved.half.forEach(id=>{if(byId.has(id))byId.get(id).classList.add('half')});
+    }
+  }catch(_){}
+  cards.forEach(card=>card.updateWidthButton());
+  document.getElementById('reset-panel-layout').addEventListener('click',()=>{
+    cards.forEach(card=>{main.insertBefore(card,footer);card.classList.remove('half');card.updateWidthButton()});
+    try{localStorage.removeItem(storageKey)}catch(_){}
+    resizeCharts();
+  });
+}
 
 // Dates are the SILSO cycle minima (monthly, 13-month smoothed SSN v2.0).
 const cycleStarts=[
@@ -222,14 +330,82 @@ async function butterfly(){
 }
 
 let flareData=[];
+let flarePeaks=[];
+let flareMode='all';
 const flareColors={C:'#f8e9a3',M:'#f7c99b',X:'#efadb5'};
-async function flares(){
+const flareReportURL='https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes/multi/l2/data/xrsf-l2-flrpt_science/csv/';
+function normalizeFlarePeaks(rows){
+  return rows.map(v=>({date:String(v.date||v.time||'').replace(' ','T'),
+    class:String(v.class||v.flare_class||''),
+    peak:Number(v.peak===undefined?v.xrsb_irrad:v.peak)}))
+    .filter(v=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v.date)&&+v.date.slice(0,4)>=1996&&
+      +v.date.slice(0,4)<=2026&&/^[CMX]\d/.test(v.class)&&
+      Number.isFinite(v.peak)&&v.peak>0)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+}
+function parseFlareCSV(csv){
+  const lines=csv.trim().split(/\r?\n/),header=lines.shift().replace(/^\uFEFF/,'').split(',');
+  const index=['time','flare_class','xrsb_irrad'].map(name=>header.indexOf(name));
+  if(index.some(i=>i<0))throw new Error('Missing GOES flare report columns');
+  return normalizeFlarePeaks(lines.map(line=>{
+    const fields=line.split(',');
+    return {time:fields[index[0]],flare_class:fields[index[1]],xrsb_irrad:fields[index[2]]};
+  }));
+}
+async function loadFlarePeaks(){
   try{
-    const d=await getJSON('data/flares.json');if(!d.length)throw 0;
-    flareData=d.sort((a,b)=>a.year-b.year);drawFlares('all');
-  }catch(e){document.getElementById('flares-note').style.display='block';errPlot('flares','Flare-count data file not built yet')}
+    const local=normalizeFlarePeaks(await getJSON('data/flare_peaks.json'));
+    if(local.length>1000)return local;
+  }catch(_){}
+  const listing=await fetch(flareReportURL);
+  if(!listing.ok)throw new Error('GOES flare report listing unavailable');
+  const names=[...(await listing.text()).matchAll(/sci_xrsf-l2-flrpt_geo_s\d+_e\d+_v[\d-]+\.csv/g)].map(m=>m[0]);
+  if(!names.length)throw new Error('No GOES flare report found');
+  names.sort();
+  const response=await fetch(flareReportURL+names[names.length-1]);
+  if(!response.ok)throw new Error('GOES flare report unavailable');
+  const peaks=parseFlareCSV(await response.text());
+  if(!peaks.length)throw new Error('No GOES flare peaks found');
+  return peaks;
+}
+function annualFlareCounts(peaks){
+  const years=new Map();
+  for(let year=1996;year<=2026;year++)years.set(year,{year,C:0,M:0,X:0});
+  for(const peak of peaks)years.get(+peak.date.slice(0,4))[peak.class[0]]++;
+  return [...years.values()];
+}
+async function flares(){
+  const peakNote=document.getElementById('flare-peaks-note');
+  peakNote.textContent='Loading the GOES flare report…';
+  peakNote.style.display='block';
+  try{
+    const d=await getJSON('data/flares.json');
+    if(d.length){flareData=d.sort((a,b)=>a.year-b.year);await drawFlares('all')}
+  }catch(_){}
+  try{
+    flarePeaks=await loadFlarePeaks();
+    flareData=annualFlareCounts(flarePeaks);
+    document.getElementById('flare-source').innerHTML=`Source: <a href="${flareReportURL}" target="_blank" rel="noopener noreferrer">NOAA/NCEI GOES XRS science-quality flare report</a>`;
+    document.getElementById('flares-note').style.display='none';
+    peakNote.style.display='none';
+    await drawFlares(flareMode);
+    await drawFlarePeaks(flareMode);
+  }catch(e){
+    peakNote.innerHTML='GOES flare peaks could not be loaded. Run <b>python build_data.py --flares-only</b> to create the local data file, then reload this page.';
+    peakNote.style.display='block';
+    errPlot('flare-peaks','GOES flare peaks could not be loaded');
+    if(!flareData.length){
+      document.getElementById('flares-note').style.display='block';
+      errPlot('flares','Flare-count data file not built yet');
+    }else{
+      const countNote=document.getElementById('flares-note');
+      countNote.textContent='Annual counts are from the older SWPC event-report extract and may differ from the GOES XRS flare report.';
+      countNote.style.display='block';
+    }
+  }
 }
 function drawFlares(mode){
+  flareMode=mode;
   document.querySelectorAll('#flare-controls button').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
   const classes=['C','M','X'],labels={C:'C-class',M:'M-class',X:'X-class'};
   const x=annualDates(flareData),years=annualYears(flareData);
@@ -242,8 +418,31 @@ function drawFlares(mode){
     barmode:mode==='all'?'stack':'group',legend:{orientation:'h',x:.5,xanchor:'center',y:-.18}
   }),true);
 }
+function drawFlarePeaks(mode){
+  if(!flarePeaks.length)return;
+  const classes=mode==='all'?['C','M','X']:[mode];
+  const traces=classes.map(c=>{
+    const rows=flarePeaks.filter(v=>v.class[0]===c);
+    return {x:rows.map(v=>v.date),y:rows.map(v=>v.peak),customdata:rows.map(v=>v.class),
+      type:'scattergl',mode:'markers',name:`${c}-class`,
+      marker:{color:flareColors[c],size:4,opacity:.55},
+      hovertemplate:'%{x|%Y-%m-%d %H:%M} UTC<br>%{customdata}<br>%{y:.2e} W/m²<extra></extra>'};
+  });
+  const markers=cycleMarkers();
+  return renderPlot('flare-peaks',traces,{...common,...markers,hovermode:'closest',
+    legend:{orientation:'h',x:.5,xanchor:'center',y:-.18},
+    yaxis:{...common.yaxis,title:'Peak X-ray flux (W/m²)',type:'log',range:[-6.25,-2],
+      tickvals:[1e-6,1e-5,1e-4,1e-3],ticktext:['C1','M1','X1','X10']},
+    xaxis:{...common.xaxis,title:'Year',type:'date',tickformat:'%Y',dtick:'M12',
+      range:['1995-01-01','2026-12-31']},
+    shapes:[...markers.shapes,...[1e-6,1e-5,1e-4].map(y=>({
+      type:'line',xref:'paper',x0:0,x1:1,yref:'y',y0:y,y1:y,
+      line:{color:'#b8bec6',width:1,dash:'dot'},layer:'below'
+    }))]
+  },true);
+}
 document.getElementById('flare-controls').addEventListener('click',e=>{
-  if(e.target.dataset.mode)drawFlares(e.target.dataset.mode);
+  if(e.target.dataset.mode){drawFlares(e.target.dataset.mode);drawFlarePeaks(e.target.dataset.mode)}
 });
 
 let stormData=[];
@@ -290,6 +489,6 @@ function drawStorms(mode){
 document.getElementById('storm-controls').addEventListener('click',e=>{
   if(e.target.dataset.mode)drawStorms(e.target.dataset.mode);
 });
-solarCycle();spotless();butterfly();flares();storms();
+setupPanels();solarCycle();spotless();butterfly();flares();storms();
 </script>
 </body></html>

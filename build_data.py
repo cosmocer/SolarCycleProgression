@@ -6,7 +6,7 @@ Dependencies: requests
 from __future__ import annotations
 import concurrent.futures as cf
 import datetime as dt
-import json, re, time
+import argparse, csv, io, json, re
 from pathlib import Path
 import requests
 
@@ -75,29 +75,46 @@ def build_butterfly(start=dt.date(2004,1,1)):
     (OUT/'butterfly.json').write_text(json.dumps(out,separators=(',',':')))
     print('butterfly:',len(out),'region-day points')
 
-def fetch_events(d):
-    u=f'https://www.ngdc.noaa.gov/stp/space-weather/swpc-products/daily_reports/solar_event_reports/{d:%Y/%m}/{d:%Y%m%d}events.txt'
-    try:return d,get(u,12).text
-    except:return d,''
+FLARE_REPORT='https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes/multi/l2/data/xrsf-l2-flrpt_science/csv/'
 
-def build_flares(start=dt.date(1996,1,1)):
-    days=list(daterange(start,dt.date.today())); annual={}
-    print('flares: downloading',len(days),'daily event files (one-time build; can take a while)')
-    with cf.ThreadPoolExecutor(max_workers=16) as ex:
-        for n,(d,txt) in enumerate(ex.map(fetch_events,days),1):
-            if txt:
-                y=d.year; annual.setdefault(y,{'year':y,'C':0,'M':0,'X':0})
-                # Count XRA event rows and extract GOES class from Particulars.
-                # Event files have fixed-width/space-separated rows; only rows containing XRA are used.
-                for line in txt.splitlines():
-                    if ' XRA ' not in f' {line} ': continue
-                    m=re.search(r'\b([CMX])\s*([0-9]+(?:\.[0-9]+)?)\b',line)
-                    if m: annual[y][m.group(1)]+=1
-            if n%1000==0: print(' ',n,'/',len(days))
-    data=[annual.get(y,{'year':y,'C':0,'M':0,'X':0}) for y in range(start.year,dt.date.today().year+1)]
-    (OUT/'flares.json').write_text(json.dumps(data,separators=(',',':')))
-    print('flares:',len(data),'years')
+def build_flares():
+    """Use one science-quality event list for both annual counts and peak fluxes."""
+    listing=get(FLARE_REPORT).text
+    names=re.findall(r'sci_xrsf-l2-flrpt_geo_s\d+_e\d+_v[\d-]+\.csv',listing)
+    if not names: raise RuntimeError('NOAA GOES XRS flare report not found')
+    filename=max(names)
+    print('flares: downloading',filename)
+    report=get(FLARE_REPORT+filename,120).text
+    peaks=[]
+    annual={year:{'year':year,'C':0,'M':0,'X':0} for year in range(1996,2027)}
+    reader=csv.DictReader(io.StringIO(report))
+    if not {'time','flare_class','xrsb_irrad'}<=set(reader.fieldnames or []):
+        raise ValueError('NOAA GOES flare report is missing required columns')
+    for row in reader:
+        date=row['time'].strip()
+        if len(date)<16 or not date[:4].isdigit(): continue
+        year=int(date[:4]); flare_class=row['flare_class'].strip()
+        if year not in annual or not re.match(r'^[CMX]\d',flare_class): continue
+        try: peak=float(row['xrsb_irrad'])
+        except (TypeError,ValueError): continue
+        if not 0<peak<0.1: continue
+        peaks.append({'date':date.replace(' ','T'),'class':flare_class,'peak':peak})
+        annual[year][flare_class[0]]+=1
+    if len(peaks)<1000: raise ValueError('GOES flare report yielded too few events')
+    old_file=OUT/'flares.json'
+    if old_file.exists():
+        old={row['year']:row for row in json.loads(old_file.read_text())}
+        different=[year for year,counts in annual.items() if year in old and any(counts[c]!=old[year].get(c,0) for c in 'CMX')]
+        print('flares: annual counts differ from old SWPC XRA-row counts in',len(different),'years')
+    (OUT/'flare_peaks.json').write_text(json.dumps(peaks,separators=(',',':')))
+    (OUT/'flares.json').write_text(json.dumps(list(annual.values()),separators=(',',':')))
+    print('flares:',len(peaks),'C/M/X peaks, 1996–2026')
 
 if __name__=='__main__':
-    build_spotless(); build_storms(); build_butterfly(); build_flares()
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--flares-only',action='store_true',help='rebuild the GOES flare counts and peak-flux data only')
+    args=parser.parse_args()
+    if not args.flares_only:
+        build_spotless(); build_storms(); build_butterfly()
+    build_flares()
     print('\nDone. Serve this folder with: python -m http.server 8000')
