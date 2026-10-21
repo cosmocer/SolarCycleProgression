@@ -19,7 +19,7 @@ python -m http.server 8000
 
 Open `http://localhost:8000`.
 
-The sunspot and F10.7 plots load directly from NOAA/SWPC. Spotless days and Kp statistics try their official web services first and fall back to local JSON.
+The sunspot plot loads directly from NOAA/SWPC. The F10.7 plot combines the local monthly archive for January 1995–September 2004 with live NOAA/SWPC values; NOAA/SWPC takes precedence in overlapping months. Spotless days and Kp statistics try their official web services first and fall back to local JSON.
 
 For the butterfly and flare-count plots, build the static historical JSON once:
 
@@ -30,9 +30,14 @@ python build_data.py
 
 The first full build downloads many small NOAA/NCEI daily archive files and can therefore take a while. Subsequent use of the web page is static and fast. You can run the builder periodically (for example monthly) and commit the updated `data/*.json` files to GitHub.
 
+## GitHub Pages
+
+Commit `index.html`, `build_data.py`, and the `data` folder to a repository. After running `build_data.py`, enable GitHub Pages for the repository. The page itself needs no Python server in production.
+
 ## Data sources
 
-- Sunspot progression and F10.7: NOAA/SWPC ISES solar-cycle JSON service
+- Sunspot progression and F10.7 since September 2004: NOAA/SWPC ISES solar-cycle JSON service
+- F10.7, January 1995–September 2004: [NOAA/PSL monthly solar flux](https://psl.noaa.gov/data/correlation/solar.data), divided by 10 to convert its tenths of an sfu to sfu. The local copy is `data/f107_1995_2004.json`. Missing smoothed values are calculated with a centered 13-month mean, with the first and last months weighted by half; six months of observations on either side are required.
 - Spotless days: WDC-SILSO daily total sunspot number
 - Butterfly diagram: NOAA/NCEI Solar Region Summary archive
 - Solar flare counts: NOAA/NCEI SWPC Solar Event Reports
