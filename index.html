@@ -43,20 +43,32 @@ const common={
 
 // Dates are the SILSO cycle minima (monthly, 13-month smoothed SSN v2.0).
 const cycleStarts=[
+  ['SC1','1755-02-01'],['SC2','1766-06-01'],['SC3','1775-06-01'],
+  ['SC4','1784-09-01'],['SC5','1798-04-01'],['SC6','1810-07-01'],
+  ['SC7','1823-05-01'],['SC8','1833-11-01'],['SC9','1843-07-01'],
+  ['SC10','1855-12-01'],['SC11','1867-03-01'],['SC12','1878-12-01'],
+  ['SC13','1890-03-01'],['SC14','1902-01-01'],['SC15','1913-07-01'],
+  ['SC16','1923-08-01'],['SC17','1933-09-01'],['SC18','1944-02-01'],
+  ['SC19','1954-04-01'],['SC20','1964-10-01'],
   ['SC21','1976-03-01'],['SC22','1986-09-01'],['SC23','1996-08-01'],
   ['SC24','2008-12-01'],['SC25','2019-12-01']
 ];
-function cycleMarkers(){
+const recentCycleStarts=cycleStarts.filter(([,date])=>date>='1995-01-01');
+function cycleMarkers(starts=recentCycleStarts){
   return {
-    shapes:cycleStarts.map(([label,date])=>({
+    shapes:starts.map(([label,date])=>({
       type:'line',xref:'x',yref:'paper',x0:date,x1:date,y0:0,y1:1,
-      line:{color:'rgba(90,105,120,.30)',width:1,dash:'dot'},layer:'below'
+      line:{color:'#aaa',width:1,dash:'dash'},layer:'below'
     })),
-    annotations:cycleStarts.map(([label,date])=>({
+    annotations:starts.map(([label,date])=>({
       x:date,y:.98,xref:'x',yref:'paper',text:label,textangle:-90,
       showarrow:false,xanchor:'left',yanchor:'top',font:{size:10,color:'#8994a0'}
     }))
   };
+}
+function rangeFrom1995(dates){
+  const lastYear=dates.reduce((year,date)=>Math.max(year,+String(date).slice(0,4)),1995);
+  return ['1995-01-01',`${lastYear+1}-01-01`];
 }
 const initialViews=new Map();
 async function renderPlot(id,traces,layout,update=false){
@@ -94,9 +106,9 @@ async function solarCycle(){
     await renderPlot('sunspot',[
       {x,y:ssn,name:'Monthly mean total sunspot number',mode:'lines',line:{width:1.2,color:'#111'}},
       {x,y:smooth,name:'13-month smoothed monthly total sunspot number',mode:'lines',line:{width:3,color:'#e31a1c'}}
-    ],{...common,...cycleMarkers(),legend:{orientation:'h',x:.5,xanchor:'center',y:-.18},
+    ],{...common,...cycleMarkers(cycleStarts),legend:{orientation:'h',x:.5,xanchor:'center',y:-.18},
       yaxis:{...common.yaxis,title:'Sunspot number',rangemode:'tozero'},
-      xaxis:{...common.xaxis,rangeslider:{visible:true,thickness:.12},
+      xaxis:{...common.xaxis,
         rangeselector:{buttons:[
           {count:33,label:'3 cycles',step:'year',stepmode:'backward'},
           {count:55,label:'5 cycles',step:'year',stepmode:'backward'},
@@ -112,7 +124,7 @@ async function solarCycle(){
       {x:f.map(v=>v.x),y:f.map(v=>v.s),name:'Smoothed F10.7',mode:'lines',line:{width:3,color:'#e31a1c'},connectgaps:false}
     ],{...common,...cycleMarkers(),legend:{orientation:'h',x:.5,xanchor:'center',y:-.18},
       yaxis:{...common.yaxis,title:'F10.7 (sfu)'},
-      xaxis:{...common.xaxis,rangeslider:{visible:true,thickness:.12}}});
+      xaxis:{...common.xaxis,range:rangeFrom1995(f.map(v=>v.x))}});
   }catch(e){errPlot('sunspot','Could not load NOAA solar-cycle data');errPlot('f107','Could not load NOAA F10.7 data')}
 }
 
@@ -136,7 +148,8 @@ function annualLayout(d,yTitle,extra={}){
   return {...common,...markers,...extra,
     annotations:[...markers.annotations,...incompleteYearAnnotation(d)],
     yaxis:{...common.yaxis,title:yTitle,rangemode:'tozero'},
-    xaxis:{...common.xaxis,title:'Year',type:'date',tickformat:'%Y',dtick:'M12'}};
+    xaxis:{...common.xaxis,title:'Year',type:'date',tickformat:'%Y',dtick:'M12',
+      range:rangeFrom1995(annualDates(d))}};
 }
 async function spotless(){
   try{
@@ -179,7 +192,7 @@ async function butterfly(){
       hovertemplate:'%{x}<br>Latitude %{y:.0f}°<extra></extra>'
     }],{...common,...cycleMarkers(),hovermode:'closest',
       yaxis:{...common.yaxis,title:'Solar latitude (°)',range:[-45,45],zeroline:true,zerolinecolor:'#888'},
-      xaxis:{...common.xaxis,rangeslider:{visible:true,thickness:.10}}});
+      xaxis:{...common.xaxis,range:rangeFrom1995(d.map(v=>v.date))}});
   }catch(e){document.getElementById('butterfly-note').style.display='block';errPlot('butterfly','Butterfly data file not built yet')}
 }
 
